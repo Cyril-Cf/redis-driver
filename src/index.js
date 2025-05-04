@@ -15,9 +15,13 @@ export default function RedisCache (opt) {
   const client = new Redis(options);
 
   return {
-    async invoke({ route, render, getTags }) {
-      let key = `page:${ route }`;
+    async invoke({ route, context, render, getTags }) {
+      let key = `page`;
       let shouldCache = true;
+
+      if (options.mobileDetectionFn ? options.mobileDetectionFn(context.req) : false) {
+        key = `${key}:mobile`
+      }
       
       if (
         options.queryParamFilter?.denyList &&
@@ -53,12 +57,14 @@ export default function RedisCache (opt) {
           }
         }
 
-        key = `page:${urlParts[0]}${
+        key = `${key}:${urlParts[0]}${
           cleanParams.length ? "?" : ""
         }${cleanParams.join("&")}`;
 
         // console.log(`Original route: ${route}\nkey ${shouldCache ? "is" : "is not"} cacheable`);
 
+      } else {
+        key = `${key}:${ route }`
       }
 
       if (shouldCache) {
