@@ -16,80 +16,38 @@ export default function RedisCache (opt) {
 
   return {
     async invoke({ route, context, render, getTags }) {
-      let key = `page`;
-      let shouldCache = true;
-
+      let key = 'page';
       if (options.mobileDetectionFn ? options.mobileDetectionFn(context.req) : false) {
-        key = `${key}:mobile`
+        key += ':mobile'
       }
-      
-      if (
-        options.queryParamFilter?.denyList &&
-        options.queryParamFilter?.allowList
-      ) {
-        /*
-        allowList and denyList contain query params that could affect the content of the page.
-        Any other params that don't exist in deny/allowList can be stripped as they do not affect the content of the page (e.g. gclid).
 
-        Examples:
-        sale/april-catalogue/up-to-50-off?sc_src=email_3757321&sc_lid=272735070&sc_uid=zNKj3A7HFD - Cache but strip all except allowList
-        term=white+shirt&sort=price_ascending&page=2                                              - Only allowListed params - cache and keep allowList
-        search?term=dress&sort=price_ascending&page=1&itemsPerPage=100                            - Do not cache, denyList item exists
-        */
-        const cleanParams = [];
-        const urlParts = route.split("?");
-        if (urlParts.length == 2) {
-          const params = urlParts[1].split("&");
-
-          for (const param of params) {
-            const paramKey = param.split("=")[0];
-            if (
-              // Do not cache: denyListed param exists (stop processing further params)
-              options.queryParamFilter.denyList.includes(paramKey)
-            ) {
-              shouldCache = false;
-              break;
-            }
-            // add any allowList params to cleanParams, ignore any other params
-            if (options.queryParamFilter.allowList.includes(paramKey)) {
-              cleanParams.push(param);
-            }
-          }
+      const baseUrl = 'http://localhost' // necessary to build URL object but unused afterwards
+      if (options.paramsToRemoveFromUrl?.length) {
+        const url = new URL(route, baseUrl);
+        for (const param of options.paramsToRemoveFromUrl) {
+          url.searchParams.delete(param);
         }
-
-        key = `${key}:${urlParts[0]}${
-          cleanParams.length ? "?" : ""
-        }${cleanParams.join("&")}`;
-
-        // console.log(`Original route: ${route}\nkey ${shouldCache ? "is" : "is not"} cacheable`);
-
+        key += `:${url.pathname}${url.search}`;
       } else {
-        key = `${key}:${ route }`
+        key += `:${route}`;
       }
 
-      if (shouldCache) {
-        const cachedResponse = await client.get(key);
-
-        if (cachedResponse) {
-          return cachedResponse;
-        }
+      const cachedResponse = await client.get(key);
+      if (cachedResponse) {
+        return cachedResponse;
       }
 
       const content = await render();
       const tags = getTags();
-
       if (!tags.length) {
         return content;
       }
 
-      // We could add "await" here, but saving content in cache doesn't have to block the request
-      if (shouldCache) {
-        client.set(
-          key,
-          content,
-          tags
-        );
-      }
+      await client.set(
+        key,
+        content,
+        tags
+      );
       return content;
     },
 
