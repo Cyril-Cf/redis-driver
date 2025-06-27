@@ -101,19 +101,12 @@ export default function RedisCache (opt) {
       }
 
       return new Promise((resolve, reject) => {
-        const prefix = `${options.redis.keyPrefix || ''}tags:`;
-        const stream = client.redis.scanStream({ match: `${prefix}*` });
-
-        const tags = [];
-
-        stream.on('data', rawTags => tags.push(...rawTags.map(tag => tag.replace(prefix, ''))));
-        stream.on('end', async () => {
-          if (tags.length) {
-            await client.invalidate(...tags);
+        client.redis.flushall((err, result) => {
+          if (err) {
+            return reject(err);
           }
-          resolve();
-        });
-        stream.on('error', reject);
+          resolve(result);
+        })
       });
     }
   };
