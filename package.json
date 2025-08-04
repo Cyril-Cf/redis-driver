@@ -8,6 +8,7 @@
     "publish:driver": "node ./scripts/publishDriver.js"
   },
   "dependencies": {
+    "node-html-parser": "^7.0.1",
     "redis-tag-cache": "^1.2.1"
   },
   "devDependencies": {
