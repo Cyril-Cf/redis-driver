@@ -78,7 +78,6 @@ export default function RedisCache(opt) {
 }
 
 function rewriteUrlsInHtml(html, finalUrl) {
-  console.log("INSIDE REWRITE");
   html = Buffer.isBuffer(html) ? html.toString("utf8") : String(html);
   html = html.replace(/<link\b([^>]*\brel=["']canonical["'][^>]*)>/i, (m) =>
     m.replace(/href=["'][^"']*["']/, `href="${finalUrl}"`)
