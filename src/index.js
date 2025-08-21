@@ -40,7 +40,7 @@ export default function RedisCache(opt) {
         (context.req.connection.encrypted ? "https" : "http");
       const host = context.req.headers["host"];
       const finalOrigin = `${protocol}://${host}`;
-      const finalUrl = finalOrigin + reqUrl.pathname + cleanedUrl.search;
+      const finalUrl = finalOrigin + reqUrl.pathname;
 
       const cachedResponse = await client.get(key);
       if (cachedResponse) {
@@ -49,7 +49,7 @@ export default function RedisCache(opt) {
 
       let rendered = await render();
       if (forbiddenParamsDetected) {
-        rendered.html = rewriteUrlsInHtml(rendered.html, finalUrl);
+        rendered.html = rewriteUrlsInHtml(rendered.html, finalUrl, cleanedUrl.search);
       }
       const tags = getTags();
       if (tags.length) {
@@ -77,13 +77,13 @@ export default function RedisCache(opt) {
   };
 }
 
-function rewriteUrlsInHtml(html, finalUrl) {
+function rewriteUrlsInHtml(html, finalUrl, searchParams) {
   html = Buffer.isBuffer(html) ? html.toString("utf8") : String(html);
   html = html.replace(/<link\b([^>]*\brel=["']canonical["'][^>]*)>/i, (m) =>
     m.replace(/href=["'][^"']*["']/, `href="${finalUrl}"`)
   );
   html = html.replace(/<link\b([^>]*\brel=["']alternate["'][^>]*)>/gi, (m) =>
-    m.replace(/href=["'][^"']*["']/, `href="${finalUrl}"`)
+    m.replace(/href=["'][^"']*["']/, `href="${finalUrl}${searchParams}"`)
   );
   return html;
 }
